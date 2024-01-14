@@ -242,9 +242,11 @@ app.get('/api/fetch-link', async (req, res) => {
     console.log('api/fetch-link',link)
     if (!link) {
       res.status(404).json({ linkStatus: "not_found" });
-    } else if (isLinkExpired(link)) {
-      res.status(200).json({ linkStatus: "expired" });
-    } else {
+    }
+    //  else if (isLinkExpired(link)) {
+    //   res.status(200).json({ linkStatus: "expired" });
+    // }
+     else {
       res.status(200).json({ linkStatus: "valid" });
     }
   } catch (error) {
