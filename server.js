@@ -5,6 +5,7 @@ const cors = require('cors');
 var admin = require("firebase-admin");
 
 var serviceAccount = require("./serviceAccountKey.json");
+let currentStoredLink = null;
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -182,49 +183,44 @@ async function fetchDataFromFirebase() {
   }
 }
 
-// Create a new route for storing the link and checking if it exists in Firebase
-app.post('/api/store-link', async (req, res) => {
-  // Implementation of /store-link endpoint
-  // ...
+async function validateLink(link) {
   try {
-    const { link } = req.body;
-    console.log(link);
-    const existingData = await fetchDataFromFirebase();
+    const response = await axios.get(link);
+    const linkContent = response.data;
 
-    if (Array.isArray(existingData)) {
-      // Check if the link is already stored in Firebase
-      const isLinkStored = existingData.includes(link);
+    const invalidMessage = 'The link you have provided is no longer valid.  If you feel this is in error, please contact';
 
-      if (isLinkStored) {
-        res.status(200).json({ message: 'Link is already stored.' });
-      } else {
-        // Check if the link is working (you can customize this check)
-        const isLinkWorking = true; // Implement your link check logic here
-
-        if (isLinkWorking) {
-          // If the link is working, store it in Firebase
-          const db = admin.database();
-          
-          // Directly set the link using "vendorLink" as the key
-          db.ref('VendorLinks').set(link);
-
-          res.status(200).json({ message: 'Link stored successfully' });
-        } else {
-          // If the link is not working, return an error
-          res.status(400).json({ error: 'Link is not working.' });
-        }
-      }
-    } else {
-      // If "existingData" is not an array or doesn't exist, create a new "VendorLinks" node and store the link
+    if (!linkContent.includes(invalidMessage)) {
       const db = admin.database();
       db.ref('VendorLinks').set(link);
+      console.log("Validate Link")
+      return "Link stored successfully";
+    } else {
+      console.log("Invalidate Link")
+      return "Link contains the invalid message";
+    }
+  } catch (error) {
+    console.error('Error while validating the link:', error);
+    throw error; // Propagate the error
+  }
+}
 
-      res.status(200).json({ message: 'Link stored successfully' });
+app.post('/api/store-link', async (req, res) => {
+  try {
+    const { link } = req.body;
+    currentStoredLink = link; // Update the global variable
+    const result = await validateLink(link);
+
+    if (result === "Link stored successfully") {
+      res.status(200).json({ message: result });
+    } else {
+      res.status(400).json({ message: result });
     }
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
+
 
 // Function to check if the link body contains a table
 function containsTable(body) {
@@ -275,7 +271,7 @@ function isLinkExpired(link) {
     const $ = cheerio.load(link);
 
     // Define the expected expiration message
-    const expirationMessage = 'The link you have provided is no longer valid. If you feel this is in error, please contact Vendor Support.';
+    const expirationMessage = 'The link you have provided is no longer valid.  If you feel this is in error, please contact';
   
     console.log('body',$('body').text())
     // Check if the body contains the expected expiration message
@@ -284,6 +280,44 @@ function isLinkExpired(link) {
     // Check if the link body doesn't contain a table or contains the expiration message
     return !containsTable(link.body) || messageFound;
 }
+
+app.get('/api/extract-table', async (req, res) => {
+  try {
+    if(currentStoredLink!=null){
+      link  = currentStoredLink;
+    }else{
+      link = req.query.link;
+    }
+    
+    if (!link) {
+      return res.status(400).json({ error: 'Link is required' });
+    }
+
+    const response = await axios.get(link);
+    const $ = cheerio.load(response.data);
+    const table = $('table'); // Modify this if needed to target a specific table
+    const headers = [];
+
+    // Assuming the first row of the table contains headers
+    table.find('tr').first().find('td').each((index, element) => {
+      headers.push($(element).text().trim());
+    });
+
+    const tableData = [];
+    table.find('tr').slice(1).each((index, row) => {
+      const rowData = {};
+      $(row).find('td').each((idx, cell) => {
+        rowData[headers[idx]] = $(cell).text().trim();
+      });
+      tableData.push(rowData);
+    });
+
+    res.json(tableData);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 
 // API endpoint to update delivery status
 app.post('/api/updateDeliveryStatus', async (req, res) => {
