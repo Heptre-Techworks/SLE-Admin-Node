@@ -344,6 +344,30 @@ app.post('/api/updateDeliveryStatus', async (req, res) => {
   }
 });
 
+app.get('/api/proxy', (req, res) => {
+  // URL of the external content you want to proxy
+  if(currentStoredLink!=null){
+    url  = currentStoredLink;
+  }else{
+    url = req.query.link;
+  }
+
+  request(url, (error, response, body) => {
+      if (!error && response.statusCode == 200) {
+          let modifiedContent = body.replace(/<td>(.*?)<\/td>/g, (match, g1, index) => {
+              // Assuming you want to hide the fifth column
+              if ((index + 1) % 5 === 0) return '';
+              return match;
+          });
+
+          res.send(modifiedContent);
+      } else {
+          res.status(500).send('Error fetching the page.');
+      }
+  });
+});
+
+
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
