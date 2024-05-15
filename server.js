@@ -238,6 +238,7 @@ app.get('/api/fetch-link', async (req, res) => {
   try {
     const link = await fetchLinkFromFirebase(); // Implement this function to fetch the link content
     console.log('api/fetch-link',link)
+    currentStoredLink=link;
     if (!link) {
       res.status(404).json({ linkStatus: "not_found" });
     }
