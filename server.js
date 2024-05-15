@@ -324,13 +324,8 @@ app.get('/api/extract-table', async (req, res) => {
 
 
 
-app.get('/api/proxy', (req, res) => {
-  // URL of the external content you want to proxy
-  if(currentStoredLink!=null){
-    url  = currentStoredLink;
-  }else{
-    url = req.query.link;
-  }
+app.get('/api/proxy', async(req, res) => {
+const url = await fetchLinkFromFirebase();
 console.log("Proxy fetcehd URL",url);
   request(url, (error, response, body) => {
       if (!error && response.statusCode == 200) {
