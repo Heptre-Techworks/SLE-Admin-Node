@@ -3,6 +3,8 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const cors = require('cors');
 var admin = require("firebase-admin");
+const request = require('request');
+
 
 var serviceAccount = require("./serviceAccountKey.json");
 let currentStoredLink = null;
@@ -319,30 +321,7 @@ app.get('/api/extract-table', async (req, res) => {
 });
 
 
-// API endpoint to update delivery status
-app.post('/api/updateDeliveryStatus', async (req, res) => {
-  // Implementation of /updateDeliveryStatus endpoint
-  try {
-    const { poRef, deliveryStatus,selectedPoRef } = req.body;
 
-    const poref = poRef.replace('/', '-');
-    console.log('test',poref)
-
-
-    // Initialize the Firebase Realtime Database reference
-    const db = admin.database();
-    const ref = db.ref('PORef').child(selectedPoRef).child(poref);
-
-    
-
-    // Update the "Delivery Status" for the selected item
-    ref.child('DeliveryStatus').set(deliveryStatus);
-
-    res.status(200).json({ message: 'Delivery Status updated successfully' });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
 
 app.get('/api/proxy', (req, res) => {
   // URL of the external content you want to proxy
@@ -367,7 +346,30 @@ app.get('/api/proxy', (req, res) => {
   });
 });
 
+// API endpoint to update delivery status
+app.post('/api/updateDeliveryStatus', async (req, res) => {
+  // Implementation of /updateDeliveryStatus endpoint
+  try {
+    const { poRef, deliveryStatus,selectedPoRef } = req.body;
 
+    const poref = poRef.replace('/', '-');
+    console.log('test',poref)
+
+
+    // Initialize the Firebase Realtime Database reference
+    const db = admin.database();
+    const ref = db.ref('PORef').child(selectedPoRef).child(poref);
+
+    
+
+    // Update the "Delivery Status" for the selected item
+    ref.child('DeliveryStatus').set(deliveryStatus);
+
+    res.status(200).json({ message: 'Delivery Status updated successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
