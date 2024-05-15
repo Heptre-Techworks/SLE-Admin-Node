@@ -330,7 +330,7 @@ app.get('/api/proxy', (req, res) => {
   }else{
     url = req.query.link;
   }
-
+console.log("Proxy fetcehd URL",url);
   request(url, (error, response, body) => {
       if (!error && response.statusCode == 200) {
           let modifiedContent = body.replace(/<td>(.*?)<\/td>/g, (match, g1, index) => {
